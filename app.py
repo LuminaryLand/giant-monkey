@@ -9,7 +9,7 @@ st.set_page_config(
 st.title("🦍 Giant Monkey: World Tour & Super Powers")
 st.markdown(
     "Journey through the **City**, **Small Town**, and **Country**! "
-    "Shoot rival boxer monkeys directly from your character, and eat meat (🥩) to trigger **Super Power** fire-rate boosts!"
+    "Shoot rival boxer monkeys directly from your character's gloves, and eat all the meat (🥩) to boost your super powers!"
 )
 
 with st.sidebar:
@@ -17,7 +17,7 @@ with st.sidebar:
     st.markdown("""
     - **Move:** Arrow Keys or `W`, `A`, `S`, `D`
     - **Shoot:** `SPACEBAR`
-    - **Objective:** Eat meat for super power fire-rate & clear levels!
+    - **Objective:** Collect all meat to supercharge fire-rate!
     """)
     st.divider()
     game_speed = st.slider("Game Difficulty / Speed", 1, 3, 1)
@@ -39,7 +39,7 @@ game_html_template = """
     <div class="container" onclick="start()">
         <canvas id="cv" width="720" height="420"></canvas>
         <div id="overlay">
-            <h2>▶ CLICK TO START SUPER BRAWL</h2>
+            <h2>▶ CLICK TO START GAME</h2>
             <p>Click anywhere to play</p>
         </div>
     </div>
@@ -52,22 +52,22 @@ game_html_template = """
 
         let score = 0, level = 1, hp = 100, maxHp = 100, spd = __GAME_SPEED__;
         let cameraX = 0;
-        let powerLevel = 1; // Super power fire rate multiplier
+        let powerLevel = 1;
         let lastShotTime = 0;
         
-        let p = { x: 100, y: 260, w: 36, h: 36, s: 3.5 };
+        let p = { x: 120, y: 260, w: 36, h: 36, s: 3.5 };
         let bullets = [];
         
         let opponents = [
-            { x: 500, y: 260, health: 30, max: 30, speed: 0.8 },
-            { x: 850, y: 270, health: 30, max: 30, speed: 0.7 },
-            { x: 1200, y: 250, health: 40, max: 40, speed: 0.9 }
+            { x: 550, y: 260, health: 30, max: 30, speed: 0.8 },
+            { x: 900, y: 270, health: 30, max: 30, speed: 0.7 },
+            { x: 1300, y: 250, health: 40, max: 40, speed: 0.9 }
         ];
 
         let meats = [
-            { x: 400, y: 280, r: 12 },
-            { x: 750, y: 260, r: 12 },
-            { x: 1100, y: 270, r: 12 }
+            { x: 380, y: 275, r: 24 },
+            { x: 720, y: 265, r: 24 },
+            { x: 1080, y: 280, r: 24 }
         ];
 
         let keys = {};
@@ -78,14 +78,14 @@ game_html_template = """
             if(e.code === 'Space') {
                 e.preventDefault();
                 let now = Date.now();
-                let fireCooldown = Math.max(120, 350 - (powerLevel * 40)); // Shoots faster with super powers!
+                let fireCooldown = Math.max(100, 320 - (powerLevel * 45));
                 
                 if (now - lastShotTime > fireCooldown) {
-                    // Shoot directly from character's right hand / front
+                    // Shoot directly from the tip of the player's front boxing glove (x + 24)
                     bullets.push({ 
-                        x: p.x + 24, 
-                        y: p.y, 
-                        s: 7 + (powerLevel * 0.5), 
+                        x: p.x + 26, 
+                        y: p.y + 4, 
+                        s: 8 + (powerLevel * 0.4), 
                         r: 5 + Math.min(powerLevel, 3) 
                     });
                     lastShotTime = now;
@@ -124,10 +124,9 @@ game_html_template = """
                     op.y = Math.random() * 80 + 210;
                 }
 
-                // Bullet hit check
                 bullets.forEach((b, bi) => {
-                    if (Math.hypot(b.x - op.x, b.y - op.y) < 26) {
-                        op.health -= (15 + (powerLevel * 5)); // Super power damage boost
+                    if (Math.hypot(b.x - op.x, b.y - op.y) < 28) {
+                        op.health -= (15 + (powerLevel * 5));
                         bullets.splice(bi, 1);
                         if (op.health <= 0) {
                             opponents.splice(idx, 1);
@@ -149,7 +148,7 @@ game_html_template = """
                     }
                 });
 
-                if (Math.hypot(p.x - op.x, p.y - op.y) < 26) {
+                if (Math.hypot(p.x - op.x, p.y - op.y) < 28) {
                     hp -= 0.35;
                     if (hp <= 0) {
                         hp = maxHp;
@@ -158,18 +157,19 @@ game_html_template = """
                 }
             });
 
-            // Meat Buff Superpower Collection
+            // Meat Collection (Expanded hit-box distance so it's easy to eat)
             meats.forEach((m, mi) => {
-                if (Math.hypot(p.x - m.x, p.y - m.y) < 26) {
+                let worldDist = Math.abs(p.x - m.x);
+                if (worldDist < 35 && Math.abs(p.y - m.y) < 35) {
                     meats.splice(mi, 1);
-                    score += 35;
+                    score += 40;
                     hp = Math.min(maxHp, hp + 35);
-                    powerLevel++; // UNLOCK SUPER POWERS!
+                    powerLevel++; // Super power up!
 
                     meats.push({
                         x: cameraX + cv.width + Math.random() * 300,
                         y: Math.random() * 80 + 210,
-                        r: 12
+                        r: 24
                     });
                 }
             });
@@ -223,9 +223,10 @@ game_html_template = """
             ctx.fillStyle = isPlayer ? "#2980b9" : "#c0392b";
             ctx.fillRect(x - 12, y + 4, 24, 20);
 
+            // Boxing Gloves
             ctx.fillStyle = isPlayer ? "#5dade2" : "#95a5a6";
             ctx.fillRect(x - 22, y + 2, 12, 12);
-            ctx.fillRect(x + 10, y + 2, 12, 12);
+            ctx.fillRect(x + 14, y + 2, 12, 12); // Right glove where bullets launch from
         }
 
         function draw() {
@@ -234,9 +235,9 @@ game_html_template = """
 
             meats.forEach(m => {
                 let screenX = m.x - cameraX;
-                if (screenX > -50 && screenX < cv.width + 50) {
-                    ctx.fillStyle = "#c0392b"; ctx.beginPath(); ctx.arc(screenX, m.y, m.r, 0, Math.PI*2); ctx.fill();
-                    ctx.fillStyle = "#fff"; ctx.font = "10px sans-serif"; ctx.fillText("🥩", screenX-6, m.y+4);
+                if (screenX > -60 && screenX < cv.width + 60) {
+                    ctx.fillStyle = "#c0392b"; ctx.beginPath(); ctx.arc(screenX, m.y, 14, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = "#fff"; ctx.font = "12px sans-serif"; ctx.fillText("🥩", screenX-7, m.y+5);
                 }
             });
 
@@ -256,12 +257,11 @@ game_html_template = """
 
             drawMonkey(p.x, p.y, true);
 
-            // HUD & Super Power Status
-            ctx.fillStyle = "rgba(0,0,0,0.75)"; ctx.fillRect(10, 10, 390, 42);
-            ctx.strokeStyle = "#f1c40f"; ctx.lineWidth = 2; ctx.strokeRect(10, 10, 390, 42);
+            ctx.fillStyle = "rgba(0,0,0,0.75)"; ctx.fillRect(10, 10, 410, 42);
+            ctx.strokeStyle = "#f1c40f"; ctx.lineWidth = 2; ctx.strokeRect(10, 10, 410, 42);
             
             ctx.fillStyle = "#fff"; ctx.font = "11px monospace";
-            ctx.fillText(`${getEnvironmentName()} | POWER LVL: ${powerLevel}`, 18, 25);
+            ctx.fillText(`${getEnvironmentName()} | SUPER POWER LVL: ${powerLevel}`, 18, 25);
             ctx.fillText(`SCORE: ${score} | HP: ${Math.ceil(hp)}`, 18, 42);
         }
 
