@@ -45,7 +45,7 @@ game_code = """
 </head>
 <body>
     <div id="ui">Stage: <span id="stageDisplay">1 - City Slums</span> | Score: <span id="scoreDisplay">0</span> | HP: <span id="hpDisplay">♥♥♥</span></div>
-    <div id="controls-hint">Controls: A/D or Left/Right to Move | W or Space to Jump | J or Click to Shoot Bananas</div>
+    <div id="controls-hint">Controls: A/D or Left/Right to Move | W or Up Arrow to Jump | Space or J to Shoot Bananas</div>
     <canvas id="gameCanvas" width="800" height="450"></canvas>
     
     <script>
@@ -58,14 +58,14 @@ game_code = """
         let stage = 1;
         let stageName = "City Slums";
         let cameraX = 0;
-        let invincibilityTimer = 0; // Prevents rapid-fire damage from the same enemy
+        let invincibilityTimer = 0;
         let messageTimer = 0;
         let overlayMessage = "";
 
         // Player (Retro Pixel Monkey)
         let player = {
             x: 100,
-            y: 300,
+            y: 298, // Aligned with ground level (350 - 52 height)
             width: 44,
             height: 52,
             vx: 0,
@@ -79,19 +79,30 @@ game_code = """
 
         let keys = {};
         let bullets = [];
+        // Enemies correctly placed on the ground (groundLevel 350 - enemy height 50 = 300)
         let enemies = [
-            { x: 600, y: 330, width: 40, height: 50, vx: -1.5, hp: 2, type: "mercenary" },
-            { x: 950, y: 330, width: 40, height: 50, vx: -2, hp: 3, type: "mercenary" },
-            { x: 1400, y: 320, width: 50, height: 60, vx: -1, hp: 5, type: "heavy" }
+            { x: 600, y: 300, width: 40, height: 50, vx: -1.5, hp: 2, type: "mercenary" },
+            { x: 950, y: 300, width: 40, height: 50, vx: -2, hp: 3, type: "mercenary" },
+            { x: 1400, y: 290, width: 50, height: 60, vx: -1, hp: 5, type: "heavy" }
         ];
 
         window.addEventListener("keydown", (e) => { 
-            keys[e.key.toLowerCase()] = true; 
-            if ((e.key === " " || e.key.toLowerCase() === "w") && player.grounded) {
+            // Prevent default scrolling behavior for game control keys
+            if(["space", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(e.key.toLowerCase()) || e.key === " ") {
+                e.preventDefault();
+            }
+
+            let key = e.key.toLowerCase();
+            keys[key] = true; 
+
+            // JUMP: Only W or Up Arrow
+            if ((key === "w" || e.key === "ArrowUp") && player.grounded) {
                 player.vy = player.jumpForce;
                 player.grounded = false;
             }
-            if (e.key.toLowerCase() === "j" || e.key === " ") {
+
+            // SHOOT: Only Space or J
+            if (key === "j" || e.key === " ") {
                 shootBullet();
             }
         });
@@ -103,14 +114,13 @@ game_code = """
         function shootBullet() {
             bullets.push({
                 x: player.facing > 0 ? player.x + player.width : player.x - 10,
-                y: player.y + 20,
-                vx: player.facing * 9,
-                radius: 6
+                y: player.y + 24, // Aligned directly with monkey hand height
+                vx: player.facing * 10,
+                radius: 7
             });
         }
 
         function update() {
-            // Countdown timers
             if (invincibilityTimer > 0) invincibilityTimer--;
             if (messageTimer > 0) messageTimer--;
 
@@ -126,7 +136,7 @@ game_code = """
             }
 
             player.x += player.vx;
-            if (player.x < cameraX + 50) player.x = cameraX + 50; // Don't run off left screen
+            if (player.x < cameraX + 50) player.x = cameraX + 50;
 
             // Gravity & Vertical Physics
             player.vy += player.gravity;
@@ -145,7 +155,7 @@ game_code = """
                 cameraX = player.x - 300;
             }
 
-            // Update Bullets
+            // Update Bullets & Hitboxes
             for (let i = bullets.length - 1; i >= 0; i--) {
                 bullets[i].x += bullets[i].vx;
                 if (bullets[i].x > cameraX + 850 || bullets[i].x < cameraX - 50) {
@@ -153,15 +163,15 @@ game_code = """
                     continue;
                 }
 
-                // Check collision with enemies
+                // Check collision with enemies (generous hitbox for easy hitting)
                 for (let j = enemies.length - 1; j >= 0; j--) {
                     let en = enemies[j];
                     if (
                         bullets[i] &&
-                        bullets[i].x > en.x && 
-                        bullets[i].x < en.x + en.width &&
-                        bullets[i].y > en.y && 
-                        bullets[i].y < en.y + en.height
+                        bullets[i].x > en.x - 5 && 
+                        bullets[i].x < en.x + en.width + 5 &&
+                        bullets[i].y > en.y - 5 && 
+                        bullets[i].y < en.y + en.height + 5
                     ) {
                         en.hp--;
                         bullets.splice(i, 1);
@@ -181,7 +191,7 @@ game_code = """
                     en.vx *= -1;
                 }
 
-                // Check player collision with enemy (with invincibility cooldown)
+                // Check player collision with enemy
                 if (
                     invincibilityTimer === 0 &&
                     player.x < en.x + en.width &&
@@ -190,15 +200,15 @@ game_code = """
                     player.y + player.height > en.y
                 ) {
                     hp--;
-                    invincibilityTimer = 60; // 1 second of immunity & flash
-                    player.vy = -6; // small bounce back
-                    player.x -= 30; // knockback
+                    invincibilityTimer = 60; // 1 second immunity
+                    player.vy = -6;
+                    player.x -= 30;
                     
                     if (hp <= 0) {
                         overlayMessage = "OOF! HEALTH DEPLETED - RESPAWNING...";
                         messageTimer = 120;
-                        hp = 3; // Reset life cleanly without crashing
-                        player.x = cameraX + 100; // safe respawn near camera
+                        hp = 3;
+                        player.x = cameraX + 100;
                     }
                 }
             });
@@ -208,7 +218,7 @@ game_code = """
                 let spawnX = cameraX + 800 + Math.random() * 200;
                 enemies.push({
                     x: spawnX,
-                    y: 330,
+                    y: 350 - 50, // accurately placed on ground
                     width: 40,
                     height: 50,
                     vx: -(1 + Math.random() * 2),
@@ -224,9 +234,8 @@ game_code = """
         }
 
         function drawRetroMonkey(x, y, facing) {
-            // Flash red/white when invincible
             if (invincibilityTimer > 0 && Math.floor(invincibilityTimer / 4) % 2 === 0) {
-                return; // skip drawing every few frames for a blinking hit effect
+                return; // blinking effect
             }
 
             ctx.save();
@@ -246,21 +255,21 @@ game_code = """
             ctx.fillStyle = "#DEB887";
             ctx.fillRect(16, 10, 18, 12);
 
-            // Eyes & Expression
+            // Eyes
             ctx.fillStyle = "#000";
             ctx.fillRect(19, 13, 3, 4);
             ctx.fillRect(28, 13, 3, 4);
 
-            // Retro Red Headband / Military Bandana
+            // Retro Red Headband
             ctx.fillStyle = "#CC0000";
             ctx.fillRect(8, 4, 30, 5);
             ctx.fillRect(34, 6, 8, 3);
 
-            // Boxer Shorts / Belt
+            // Boxer Belt
             ctx.fillStyle = "#FFD700";
             ctx.fillRect(8, 42, 28, 6);
 
-            // Big Retro Pixel Boxer Gloves
+            // Boxer Gloves (Extended when shooting Space or J)
             ctx.fillStyle = "#FF0000";
             if (keys["j"] || keys[" "]) {
                 ctx.fillRect(34, 22, 16, 14);
@@ -268,7 +277,7 @@ game_code = """
                 ctx.fillRect(28, 26, 14, 14);
             }
 
-            // Legs / Boots
+            // Boots
             ctx.fillStyle = "#333";
             ctx.fillRect(10, 48, 8, 4);
             ctx.fillRect(26, 48, 8, 4);
@@ -320,7 +329,7 @@ game_code = """
                 }
             });
 
-            // Draw Bullets
+            // Draw Bullets (Bananas)
             ctx.fillStyle = "#FFD700";
             bullets.forEach(b => {
                 ctx.beginPath();
@@ -334,7 +343,7 @@ game_code = """
             drawRetroMonkey(player.x, player.y, player.facing);
             ctx.restore();
 
-            // Draw On-Screen Warning / Respawn Message
+            // Warning Message Overlay
             if (messageTimer > 0) {
                 ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
                 ctx.fillRect(150, 180, 500, 70);
@@ -346,7 +355,7 @@ game_code = """
                 ctx.font = "bold 18px 'Courier New'";
                 ctx.textAlign = "center";
                 ctx.fillText(overlayMessage, 400, 222);
-                ctx.textAlign = "left"; // reset
+                ctx.textAlign = "left";
             }
         }
 
