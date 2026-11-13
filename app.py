@@ -272,4 +272,44 @@ game_html_template = """
             ctx.stroke();
 
             ctx.fillStyle = "#b9770e";
-            ctx.fillRect(p.x - 16, p.y - 24, 32, 30
+            ctx.fillRect(p.x - 16, p.y - 24, 32, 30);
+
+            ctx.fillStyle = "#f39c12";
+            ctx.fillRect(p.x - 12, p.y - 40, 24, 18);
+
+            ctx.fillStyle = "#873600";
+            ctx.fillRect(p.x - 20, p.y - 36, 8, 10);
+            ctx.fillRect(p.x + 12, p.y - 36, 8, 10);
+
+            ctx.fillStyle = "#34495e";
+            ctx.fillRect(p.x + 10, p.y - 10, 20, 8);
+
+            ctx.fillStyle = "rgba(0,0,0,0.6)";
+            ctx.fillRect(10, 10, 320, 40);
+            ctx.strokeStyle = "#f1c40f";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(10, 10, 320, 40);
+
+            ctx.fillStyle = "white";
+            ctx.font = "12px 'Courier New'";
+            ctx.fillText("SCORE: " + score + " | LVL: " + level, 20, 28);
+            ctx.fillText("HP:", 20, 44);
+            ctx.fillStyle = "#555";
+            ctx.fillRect(45, 34, 120, 10);
+            ctx.fillStyle = "#2ecc71";
+            ctx.fillRect(45, 34, (health / maxHealth) * 120, 10);
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        draw();
+    </script>
+</body>
+</html>
+"""
+
+game_html = game_html_template.replace("__GAME_SPEED__",
