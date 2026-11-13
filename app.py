@@ -1,281 +1,119 @@
 import streamlit as st
+import streamlit.components.v1 as components
 
-st.set_page_config(
-    page_title="Giant Monkey: World Tour",
-    page_icon="🦍",
-    layout="centered"
-)
+st.set_page_config(page_title="Giant Monkey: World Tour", page_icon="🦍", layout="wide")
 
-st.title("🦍 Giant Monkey: World Tour & Super Powers")
-st.markdown(
-    "Journey through the **City**, **Small Town**, and **Country**! "
-    "Your character is safely locked on screen, shooting superpower blasts straight from your boxer monkey!"
-)
+st.title("🦍 Giant Monkey: World Tour")
 
-with st.sidebar:
-    st.header("🎮 Controls")
-    st.markdown("""
-    - **Move:** Arrow Keys or `W`, `A`, `S`, `D`
-    - **Shoot:** `SPACEBAR`
-    - **Objective:** Collect meat to supercharge your shots!
-    """)
-    st.divider()
-    game_speed = st.slider("Game Difficulty / Speed", 1, 3, 1)
-
-game_html_template = """
+# HTML/JS Game Component
+game_code = """
 <!DOCTYPE html>
 <html>
 <head>
     <style>
-        body { margin: 0; background-color: #111; color: white; font-family: monospace; text-align: center; }
-        .container { position: relative; display: inline-block; }
-        canvas { background: #5dade2; display: block; margin: 0 auto; border: 4px solid #27ae60; cursor: pointer; image-rendering: pixelated; }
-        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; }
-        h2 { color: #f1c40f; margin: 0 0 10px 0; }
-        p { color: #ddd; font-size: 14px; margin: 0; }
+        body { margin: 0; background: #111; color: white; font-family: sans-serif; text-align: center; }
+        canvas { background: #222; display: block; margin: 0 auto; border: 2px solid #444; }
+        #ui { margin-top: 10px; font-size: 18px; font-weight: bold; }
     </style>
 </head>
 <body>
-    <div class="container" onclick="start()">
-        <canvas id="cv" width="720" height="420"></canvas>
-        <div id="overlay">
-            <h2>▶ CLICK TO START GAME</h2>
-            <p>Click anywhere to play</p>
-        </div>
-    </div>
+    <div id="ui">Level: <span id="levelDisplay">1 (City)</span> | Distance: <span id="distDisplay">0</span> / 1000m</div>
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
     <script>
-        const cv = document.getElementById("cv");
-        const ctx = cv.getContext("2d");
-        const overlay = document.getElementById("overlay");
-        let running = false;
-        function start() { if(!running) { running = true; overlay.style.display = "none"; loop(); } }
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
 
-        let score = 0, level = 1, hp = 100, maxHp = 100, spd = __GAME_SPEED__;
-        let cameraX = 0;
-        let powerLevel = 1;
-        let lastShotTime = 0;
-        
-        // Player locked safely within screen bounds
-        let p = { x: 120, y: 260, w: 36, h: 36, s: 3.5 };
-        let bullets = [];
-        
-        let opponents = [
-            { x: 550, y: 260, health: 30, max: 30, speed: 0.8 },
-            { x: 900, y: 270, health: 30, max: 30, speed: 0.7 },
-            { x: 1300, y: 250, health: 40, max: 40, speed: 0.9 }
-        ];
+        // Game State
+        let level = 1;
+        let distance = 0;
+        let levelLength = 1000;
+        let environmentName = "City";
 
-        let meats = [
-            { x: 380, y: 275, r: 24 },
-            { x: 720, y: 265, r: 24 },
-            { x: 1080, y: 280, r: 24 }
-        ];
+        let player = {
+            x: 100,
+            y: 280,
+            width: 50,
+            height: 70,
+            speed: 3,       // Continuous forward scroll speed
+            isWalking: true // Always walking until level completes
+        };
 
         let keys = {};
 
-        window.addEventListener('keydown', e => {
-            if(!running) return;
-            keys[e.code] = true;
-            if(e.code === 'Space') {
-                e.preventDefault();
-                let now = Date.now();
-                let fireCooldown = Math.max(90, 300 - (powerLevel * 40));
-                
-                if (now - lastShotTime > fireCooldown) {
-                    // Bullets spawn strictly from the character's exact world position (p.x + 32)
-                    bullets.push({ 
-                        x: (cameraX + p.x) + 32, 
-                        y: p.y + 4, 
-                        s: 7 + (powerLevel * 1.2), 
-                        r: 4 + (powerLevel * 1.5)  
-                    });
-                    lastShotTime = now;
-                }
-            }
-        });
-        window.addEventListener('keyup', e => { keys[e.code] = false; });
-
-        function getEnvironmentName() {
-            if (level === 1) return "LEVEL 1: CITY";
-            if (level === 2) return "LEVEL 2: SMALL TOWN";
-            return "LEVEL 3: COUNTRY";
-        }
+        window.addEventListener("keydown", (e) => { keys[e.key] = true; });
+        window.addEventListener("keyup", (e) => { keys[e.key] = false; });
 
         function update() {
-            // Strict screen boundary limits so player can never run off screen
-            if ((keys['ArrowLeft'] || keys['KeyA']) && p.x > 40) p.x -= p.s;
-            if ((keys['ArrowRight'] || keys['KeyD']) && p.x < cv.width * 0.4) {
-                p.x += p.s;
-                cameraX += p.s * 0.5; // Scroll world forward smoothly
-            }
-            if ((keys['ArrowUp'] || keys['KeyW']) && p.y > 210) p.y -= p.s;
-            if ((keys['ArrowDown'] || keys['KeyS']) && p.y < cv.height - 75) p.y += p.s;
-
-            // Bullets update
-            bullets.forEach((b, i) => {
-                b.x += b.s;
-                if (b.x > cameraX + cv.width + 100) bullets.splice(i, 1);
-            });
-
-            // Opponents update
-            opponents.forEach((op, idx) => {
-                op.x -= op.speed * spd;
-
-                if (op.x < cameraX - 100) {
-                    op.x = cameraX + cv.width + Math.random() * 200;
-                    op.y = Math.random() * 80 + 210;
-                }
-
-                bullets.forEach((b, bi) => {
-                    if (Math.hypot(b.x - op.x, b.y - op.y) < (24 + b.r)) {
-                        op.health -= (15 + (powerLevel * 8)); 
-                        bullets.splice(bi, 1);
-                        if (op.health <= 0) {
-                            opponents.splice(idx, 1);
-                            score += 60;
-                            
-                            opponents.push({
-                                x: cameraX + cv.width + Math.random() * 200,
-                                y: Math.random() * 80 + 210,
-                                health: 30 * level,
-                                max: 30 * level,
-                                speed: 0.7 + (level * 0.1)
-                            });
-
-                            if (score >= level * 200) {
-                                level++;
-                                hp = maxHp;
-                            }
-                        }
-                    }
-                });
-
-                let playerWorldX = cameraX + p.x;
-                if (Math.hypot(playerWorldX - op.x, p.y - op.y) < 28) {
-                    hp -= 0.35;
-                    if (hp <= 0) {
-                        hp = maxHp;
-                        score = Math.max(0, score - 40);
-                    }
-                }
-            });
-
-            // Meat Collection
-            meats.forEach((m, mi) => {
-                let playerWorldX = cameraX + p.x;
-                let worldDist = Math.abs(playerWorldX - m.x);
-                if (worldDist < 38 && Math.abs(p.y - m.y) < 38) {
-                    meats.splice(mi, 1);
-                    score += 40;
-                    hp = Math.min(maxHp, hp + 35);
-                    powerLevel++; // Shots become bigger and faster!
-
-                    meats.push({
-                        x: cameraX + cv.width + Math.random() * 300,
-                        y: Math.random() * 80 + 210,
-                        r: 24
-                    });
-                }
-            });
-        }
-
-        function drawScenery() {
-            if (level === 1) {
-                ctx.fillStyle = "#2c3e50"; ctx.fillRect(0, 0, cv.width, 210);
-                ctx.fillStyle = "#34495e";
-                ctx.fillRect(50 - (cameraX * 0.2) % 800, 60, 100, 150);
-                ctx.fillRect(180 - (cameraX * 0.2) % 800, 30, 120, 180);
-                ctx.fillRect(350 - (cameraX * 0.2) % 800, 80, 90, 130);
-            } else if (level === 2) {
-                ctx.fillStyle = "#5dade2"; ctx.fillRect(0, 0, cv.width, 210);
-                ctx.fillStyle = "#d35400";
-                ctx.fillRect(60 - (cameraX * 0.3) % 700, 100, 140, 110);
-                ctx.fillRect(280 - (cameraX * 0.3) % 700, 90, 160, 120);
-            } else {
-                ctx.fillStyle = "#85c1e9"; ctx.fillRect(0, 0, cv.width, 210);
-                ctx.fillStyle = "#27ae60";
-                ctx.beginPath();
-                ctx.arc(300 - (cameraX * 0.4) % 900, 210, 180, Math.PI, 0, false);
-                ctx.arc(750 - (cameraX * 0.4) % 900, 210, 220, Math.PI, 0, false);
-                ctx.fill();
+            // Continuous forward movement
+            if (player.isWalking) {
+                distance += 1; // Increment progress
             }
 
-            ctx.fillStyle = level === 1 ? "#7f8c8d" : (level === 2 ? "#d68910" : "#229954");
-            ctx.fillRect(0, 210, cv.width, 15);
-            ctx.fillStyle = level === 1 ? "#34495e" : (level === 2 ? "#7e5109" : "#145a32");
-            ctx.fillRect(0, 225, cv.width, cv.height - 225);
-        }
+            // Steering / Up & Down or jump controls
+            if (keys["ArrowUp"] || keys["w"]) player.y -= 4;
+            if (keys["ArrowDown"] || keys["s"]) player.y += 4;
+            
+            // Keep player within vertical bounds
+            if (player.y < 50) player.y = 50;
+            if (player.y > 310) player.y = 310;
 
-        function drawMonkey(x, y, isPlayer) {
-            ctx.fillStyle = "#a04000";
-            ctx.fillRect(x - 18, y - 10, 6, 12);
-            ctx.fillRect(x + 14, y - 10, 6, 12);
+            // Check Level Completion
+            if (distance >= levelLength) {
+                level++;
+                distance = 0;
+                levelLength += 500; // Increase next level length
+                if (level === 2) environmentName = "Small Town";
+                else if (level === 3) environmentName = "Country";
+                else environmentName = "World Tour Loop";
+            }
 
-            ctx.fillStyle = isPlayer ? "#3498db" : "#e74c3c";
-            ctx.fillRect(x - 14, y - 22, 28, 26);
-
-            ctx.fillStyle = "#f5b041";
-            ctx.fillRect(x - 10, y - 16, 20, 16);
-
-            ctx.fillStyle = "#000";
-            ctx.fillRect(x - 8, y - 14, 5, 4);
-            ctx.fillRect(x + 3, y - 14, 5, 4);
-
-            ctx.fillStyle = "#78281f";
-            ctx.fillRect(x - 6, y - 6, 12, 6);
-
-            ctx.fillStyle = isPlayer ? "#2980b9" : "#c0392b";
-            ctx.fillRect(x - 12, y + 4, 24, 20);
-
-            ctx.fillStyle = isPlayer ? "#5dade2" : "#95a5a6";
-            ctx.fillRect(x - 22, y + 2, 12, 12);
-            ctx.fillRect(x + 14, y + 2, 12, 12);
+            // Update UI elements
+            document.getElementById("levelDisplay").innerText = `${level} (${environmentName})`;
+            document.getElementById("distDisplay").innerText = distance;
         }
 
         function draw() {
-            ctx.clearRect(0, 0, cv.width, cv.height);
-            drawScenery();
+            // Clear screen
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            meats.forEach(m => {
-                let screenX = m.x - cameraX;
-                if (screenX > -60 && screenX < cv.width + 60) {
-                    ctx.fillStyle = "#c0392b"; ctx.beginPath(); ctx.arc(screenX, m.y, 14, 0, Math.PI*2); ctx.fill();
-                    ctx.fillStyle = "#fff"; ctx.font = "12px sans-serif"; ctx.fillText("🥩", screenX-7, m.y+5);
-                }
-            });
+            // Draw Background environment based on level
+            ctx.fillStyle = level === 1 ? "#333" : (level === 2 ? "#423" : "#242");
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            bullets.forEach(b => {
-                let screenX = b.x - cameraX;
-                ctx.fillStyle = "#f1c40f"; ctx.beginPath(); ctx.arc(screenX, b.y, b.r, 0, Math.PI*2); ctx.fill();
-            });
+            // Draw Ground line
+            ctx.strokeStyle = "#555";
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(0, 350);
+            ctx.lineTo(800, 350);
+            ctx.stroke();
 
-            opponents.forEach(op => {
-                let screenX = op.x - cameraX;
-                if (screenX > -60 && screenX < cv.width + 60) {
-                    drawMonkey(screenX, op.y, false);
-                    ctx.fillStyle = "#333"; ctx.fillRect(screenX - 18, op.y - 34, 36, 4);
-                    ctx.fillStyle = "#e74c3c"; ctx.fillRect(screenX - 18, op.y - 34, (op.health / op.max) * 36, 4);
-                }
-            });
+            // Draw Player (Boxer Monkey placeholder)
+            ctx.fillStyle = "#8B4513"; // Brown fur
+            ctx.fillRect(player.x, player.y, player.width, player.height);
 
-            // Player stays locked on screen at p.x
-            drawMonkey(p.x, p.y, true);
+            // Draw Boxer Gloves
+            ctx.fillStyle = "#FF0000"; // Red gloves
+            ctx.fillRect(player.x + 35, player.y + 30, 20, 20);
 
-            ctx.fillStyle = "rgba(0,0,0,0.75)"; ctx.fillRect(10, 10, 410, 42);
-            ctx.strokeStyle = "#f1c40f"; ctx.lineWidth = 2; ctx.strokeRect(10, 10, 410, 42);
-            
-            ctx.fillStyle = "#fff"; ctx.font = "11px monospace";
-            ctx.fillText(`${getEnvironmentName()} | SHOT POWER LVL: ${powerLevel}`, 18, 25);
-            ctx.fillText(`SCORE: ${score} | HP: ${Math.ceil(hp)}`, 18, 42);
+            // Draw moving ground markers/scenery simulation
+            ctx.fillStyle = "#666";
+            let offset = (distance * 5) % 800;
+            for(let i = -1; i < 3; i++) {
+                ctx.fillRect((i * 300) - (offset % 300), 340, 40, 10);
+            }
         }
 
-        function loop() { update(); draw(); requestAnimationFrame(loop); }
-        draw();
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        loop();
     </script>
 </body>
 </html>
 """
 
-game_html = game_html_template.replace("__GAME_SPEED__", str(game_speed))
-
-st.components.v1.html(game_html, height=450)
+components.html(game_code, height=500)
