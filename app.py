@@ -58,6 +58,9 @@ game_code = """
         let stage = 1;
         let stageName = "City Slums";
         let cameraX = 0;
+        let invincibilityTimer = 0; // Prevents rapid-fire damage from the same enemy
+        let messageTimer = 0;
+        let overlayMessage = "";
 
         // Player (Retro Pixel Monkey)
         let player = {
@@ -107,6 +110,10 @@ game_code = """
         }
 
         function update() {
+            // Countdown timers
+            if (invincibilityTimer > 0) invincibilityTimer--;
+            if (messageTimer > 0) messageTimer--;
+
             // Horizontal Movement
             player.vx = 0;
             if (keys["a"] || keys["arrowleft"]) {
@@ -141,7 +148,6 @@ game_code = """
             // Update Bullets
             for (let i = bullets.length - 1; i >= 0; i--) {
                 bullets[i].x += bullets[i].vx;
-                // Remove out of bounds
                 if (bullets[i].x > cameraX + 850 || bullets[i].x < cameraX - 50) {
                     bullets.splice(i, 1);
                     continue;
@@ -171,26 +177,28 @@ game_code = """
             // Update Enemies
             enemies.forEach(en => {
                 en.x += en.vx;
-                // Simple patrol bounds
                 if (en.x < cameraX - 100 || en.x > cameraX + 900) {
                     en.vx *= -1;
                 }
 
-                // Check player collision with enemy
+                // Check player collision with enemy (with invincibility cooldown)
                 if (
+                    invincibilityTimer === 0 &&
                     player.x < en.x + en.width &&
                     player.x + player.width > en.x &&
                     player.y < en.y + en.height &&
                     player.y + player.height > en.y
                 ) {
                     hp--;
-                    player.x -= 40; // knockback
+                    invincibilityTimer = 60; // 1 second of immunity & flash
+                    player.vy = -6; // small bounce back
+                    player.x -= 30; // knockback
+                    
                     if (hp <= 0) {
-                        alert("Mission Failed! Game Over.");
-                        hp = 3;
-                        score = 0;
-                        player.x = 100;
-                        cameraX = 0;
+                        overlayMessage = "OOF! HEALTH DEPLETED - RESPAWNING...";
+                        messageTimer = 120;
+                        hp = 3; // Reset life cleanly without crashing
+                        player.x = cameraX + 100; // safe respawn near camera
                     }
                 }
             });
@@ -216,8 +224,12 @@ game_code = """
         }
 
         function drawRetroMonkey(x, y, facing) {
+            // Flash red/white when invincible
+            if (invincibilityTimer > 0 && Math.floor(invincibilityTimer / 4) % 2 === 0) {
+                return; // skip drawing every few frames for a blinking hit effect
+            }
+
             ctx.save();
-            // Pixelated Retro Styling
             ctx.translate(x, y);
             if (facing < 0) {
                 ctx.scale(-1, 1);
@@ -242,7 +254,7 @@ game_code = """
             // Retro Red Headband / Military Bandana
             ctx.fillStyle = "#CC0000";
             ctx.fillRect(8, 4, 30, 5);
-            ctx.fillRect(34, 6, 8, 3); // Bandana tail trailing
+            ctx.fillRect(34, 6, 8, 3);
 
             // Boxer Shorts / Belt
             ctx.fillStyle = "#FFD700";
@@ -251,7 +263,6 @@ game_code = """
             // Big Retro Pixel Boxer Gloves
             ctx.fillStyle = "#FF0000";
             if (keys["j"] || keys[" "]) {
-                // Punching extension
                 ctx.fillRect(34, 22, 16, 14);
             } else {
                 ctx.fillRect(28, 26, 14, 14);
@@ -268,13 +279,10 @@ game_code = """
         function drawEnemy(en) {
             ctx.save();
             ctx.translate(en.x, en.y);
-            // Enemy Body (Green military uniform style)
             ctx.fillStyle = "#2E8B57";
             ctx.fillRect(5, 15, 30, 30);
-            // Helmet
             ctx.fillStyle = "#556B2F";
             ctx.fillRect(2, 5, 36, 12);
-            // Rifle
             ctx.fillStyle = "#111";
             ctx.fillRect(-8, 22, 16, 5);
             ctx.restore();
@@ -283,7 +291,7 @@ game_code = """
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Parallax Background Scenery (Retro City Skyline)
+            // Parallax Background Scenery
             ctx.fillStyle = "#2c3e50";
             let bgOffset = (cameraX * 0.3) % 800;
             ctx.fillRect(-bgOffset, 150, 300, 200);
@@ -293,9 +301,8 @@ game_code = """
 
             // Ground platform
             ctx.fillStyle = "#4a6572";
-            ctx.fillRect(0, 350, canvas.height, 100);
+            ctx.fillRect(0, 350, canvas.width, 100);
             
-            // Ground detail lines
             ctx.strokeStyle = "#34495e";
             ctx.lineWidth = 4;
             ctx.beginPath();
@@ -313,7 +320,7 @@ game_code = """
                 }
             });
 
-            // Draw Bullets (Bananas / Energy rounds)
+            // Draw Bullets
             ctx.fillStyle = "#FFD700";
             bullets.forEach(b => {
                 ctx.beginPath();
@@ -326,6 +333,21 @@ game_code = """
             ctx.translate(-cameraX, 0);
             drawRetroMonkey(player.x, player.y, player.facing);
             ctx.restore();
+
+            // Draw On-Screen Warning / Respawn Message
+            if (messageTimer > 0) {
+                ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+                ctx.fillRect(150, 180, 500, 70);
+                ctx.strokeStyle = "#ff4444";
+                ctx.lineWidth = 2;
+                ctx.strokeRect(150, 180, 500, 70);
+                
+                ctx.fillStyle = "#ff5555";
+                ctx.font = "bold 18px 'Courier New'";
+                ctx.textAlign = "center";
+                ctx.fillText(overlayMessage, 400, 222);
+                ctx.textAlign = "left"; // reset
+            }
         }
 
         function loop() {
