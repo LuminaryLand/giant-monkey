@@ -9,7 +9,7 @@ st.set_page_config(
 st.title("🦍 Giant Monkey: World Tour & Super Powers")
 st.markdown(
     "Journey through the **City**, **Small Town**, and **Country**! "
-    "Shoot rival boxer monkeys directly from your character's gloves, and eat all the meat (🥩) to boost your super powers!"
+    "Shoot projectiles directly from your front, and eat meat (🥩) to make your shots **bigger, faster, and more powerful**!"
 )
 
 with st.sidebar:
@@ -17,7 +17,7 @@ with st.sidebar:
     st.markdown("""
     - **Move:** Arrow Keys or `W`, `A`, `S`, `D`
     - **Shoot:** `SPACEBAR`
-    - **Objective:** Collect all meat to supercharge fire-rate!
+    - **Objective:** Collect meat to supercharge your shots!
     """)
     st.divider()
     game_speed = st.slider("Game Difficulty / Speed", 1, 3, 1)
@@ -78,15 +78,15 @@ game_html_template = """
             if(e.code === 'Space') {
                 e.preventDefault();
                 let now = Date.now();
-                let fireCooldown = Math.max(100, 320 - (powerLevel * 45));
+                let fireCooldown = Math.max(90, 300 - (powerLevel * 40));
                 
                 if (now - lastShotTime > fireCooldown) {
-                    // Shoot directly from the tip of the player's front boxing glove (x + 24)
+                    // Spawn bullets strictly in FRONT of the character (p.x + 36)
                     bullets.push({ 
-                        x: p.x + 26, 
+                        x: p.x + 36, 
                         y: p.y + 4, 
-                        s: 8 + (powerLevel * 0.4), 
-                        r: 5 + Math.min(powerLevel, 3) 
+                        s: 7 + (powerLevel * 1.2), // Faster speed per power level
+                        r: 4 + (powerLevel * 1.5)  // Bigger size per power level
                     });
                     lastShotTime = now;
                 }
@@ -125,8 +125,8 @@ game_html_template = """
                 }
 
                 bullets.forEach((b, bi) => {
-                    if (Math.hypot(b.x - op.x, b.y - op.y) < 28) {
-                        op.health -= (15 + (powerLevel * 5));
+                    if (Math.hypot(b.x - op.x, b.y - op.y) < (24 + b.r)) {
+                        op.health -= (15 + (powerLevel * 8)); // Stronger shots per power level
                         bullets.splice(bi, 1);
                         if (op.health <= 0) {
                             opponents.splice(idx, 1);
@@ -157,14 +157,14 @@ game_html_template = """
                 }
             });
 
-            // Meat Collection (Expanded hit-box distance so it's easy to eat)
+            // Meat Collection
             meats.forEach((m, mi) => {
                 let worldDist = Math.abs(p.x - m.x);
-                if (worldDist < 35 && Math.abs(p.y - m.y) < 35) {
+                if (worldDist < 38 && Math.abs(p.y - m.y) < 38) {
                     meats.splice(mi, 1);
                     score += 40;
                     hp = Math.min(maxHp, hp + 35);
-                    powerLevel++; // Super power up!
+                    powerLevel++; // Shots become bigger and faster!
 
                     meats.push({
                         x: cameraX + cv.width + Math.random() * 300,
@@ -223,10 +223,9 @@ game_html_template = """
             ctx.fillStyle = isPlayer ? "#2980b9" : "#c0392b";
             ctx.fillRect(x - 12, y + 4, 24, 20);
 
-            // Boxing Gloves
             ctx.fillStyle = isPlayer ? "#5dade2" : "#95a5a6";
             ctx.fillRect(x - 22, y + 2, 12, 12);
-            ctx.fillRect(x + 14, y + 2, 12, 12); // Right glove where bullets launch from
+            ctx.fillRect(x + 14, y + 2, 12, 12);
         }
 
         function draw() {
@@ -261,7 +260,7 @@ game_html_template = """
             ctx.strokeStyle = "#f1c40f"; ctx.lineWidth = 2; ctx.strokeRect(10, 10, 410, 42);
             
             ctx.fillStyle = "#fff"; ctx.font = "11px monospace";
-            ctx.fillText(`${getEnvironmentName()} | SUPER POWER LVL: ${powerLevel}`, 18, 25);
+            ctx.fillText(`${getEnvironmentName()} | SHOT POWER LVL: ${powerLevel}`, 18, 25);
             ctx.fillText(`SCORE: ${score} | HP: ${Math.ceil(hp)}`, 18, 42);
         }
 
