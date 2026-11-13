@@ -23,7 +23,7 @@ with st.sidebar:
     st.divider()
     game_speed = st.slider("Game Difficulty / Speed", 1, 3, 2)
 
-# HTML / JS Game embedded via Streamlit Components
+# HTML / JS Game embedded via Streamlit Components with a focus handler
 game_html = f"""
 <!DOCTYPE html>
 <html>
@@ -36,6 +36,10 @@ game_html = f"""
             font-family: sans-serif;
             text-align: center;
         }}
+        .game-container {{
+            position: relative;
+            display: inline-block;
+        }}
         canvas {{
             background: #2b2b2b;
             display: block;
@@ -43,14 +47,49 @@ game_html = f"""
             border: 4px solid #f39c12;
             border-radius: 8px;
             box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+            cursor: pointer;
         }}
+        #overlay {{
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 8px;
+            cursor: pointer;
+        }}
+        h2 {{ margin: 0 0 10px 0; color: #f39c12; }}
+        p {{ margin: 0; font-size: 14px; color: #ddd; }}
     </style>
 </head>
 <body>
-    <canvas id="gameCanvas" width="700" height="450"></canvas>
+    <div class="game-container" onclick="startGame()">
+        <canvas id="gameCanvas" width="700" height="450"></canvas>
+        <div id="overlay">
+            <h2>▶ Click Here to Play</h2>
+            <p>Click to activate controls & start brawl!</p>
+        </div>
+    </div>
+
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
+        const overlay = document.getElementById("overlay");
+
+        let gameRunning = false;
+
+        function startGame() {{
+            if (!gameRunning) {{
+                gameRunning = true;
+                overlay.style.display = "none";
+                loop();
+            }}
+        }}
 
         // Game State
         let score = 0;
@@ -85,8 +124,10 @@ game_html = f"""
         let keys = {{}};
 
         window.addEventListener('keydown', (e) => {{
+            if (!gameRunning) return;
             keys[e.code] = true;
             if (e.code === 'Space') {{
+                e.preventDefault(); // Prevent page scrolling
                 player.isPunching = true;
                 player.punchTimer = 10;
                 checkCombat();
@@ -98,7 +139,6 @@ game_html = f"""
         }});
 
         function checkCombat() {{
-            // Punch hit detection against opponents
             opponents.forEach((op, index) => {{
                 let dist = Math.hypot(player.x - op.x, player.y - op.y);
                 if (dist < player.size + op.size + 25) {{
@@ -106,7 +146,6 @@ game_html = f"""
                     if (op.health <= 0) {{
                         opponents.splice(index, 1);
                         score += 50;
-                        // Spawn new opponent
                         opponents.push({{
                             x: Math.random() * 600 + 50,
                             y: Math.random() * 350 + 50,
@@ -120,7 +159,6 @@ game_html = f"""
         }}
 
         function update() {{
-            // Movement
             if ((keys['ArrowLeft'] || keys['KeyA']) && player.x > player.size) player.x -= player.speed;
             if ((keys['ArrowRight'] || keys['KeyD']) && player.x < canvas.width - player.size) player.x += player.speed;
             if ((keys['ArrowUp'] || keys['KeyW']) && player.y > player.size + 30) player.y -= player.speed;
@@ -129,13 +167,11 @@ game_html = f"""
             if (player.punchTimer > 0) player.punchTimer--;
             else player.isPunching = false;
 
-            // Opponents AI (chase player)
             opponents.forEach(op => {{
                 let angle = Math.atan2(player.y - op.y, player.x - op.x);
                 op.x += Math.cos(angle) * op.speed * speedMultiplier;
                 op.y += Math.sin(angle) * op.speed * speedMultiplier;
 
-                // Damage player on contact
                 let dist = Math.hypot(player.x - op.x, player.y - op.y);
                 if (dist < player.size + op.size) {{
                     health -= 0.3;
@@ -146,7 +182,6 @@ game_html = f"""
                 }}
             }});
 
-            // Meat collection
             meats.forEach((meat, index) => {{
                 let dist = Math.hypot(player.x - meat.x, player.y - meat.y);
                 if (dist < player.size + meat.size) {{
@@ -154,32 +189,30 @@ game_html = f"""
                     score += 25;
                     health = Math.min(maxHealth, health + 25);
                     
-                    // Level up condition
                     if (score >= level * 150) {{
                         level++;
-                        player.size += 3; // Grow bigger!
+                        player.size += 3;
                         player.speed += 0.5;
                     }}
 
-                    // Respawn meat
                     meats.push({{
                         x: Math.random() * 640 + 30,
                         y: Math.random() * 380 + 40,
                         size: 14
                     }});
-                }});
+                }}
             }});
         }}
 
         function draw() {{
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Draw City Grid / Background Roads
+            // City Roads Grid
             ctx.strokeStyle = "#383838";
             ctx.lineWidth = 20;
             ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
 
-            // Draw Meat Buffets
+            // Meat Buffets
             meats.forEach(meat => {{
                 ctx.fillStyle = "#c0392b";
                 ctx.beginPath();
@@ -190,7 +223,7 @@ game_html = f"""
                 ctx.fillText("🥩", meat.x - 6, meat.y + 4);
             }});
 
-            // Draw Opponents
+            // Opponents
             opponents.forEach(op => {{
                 ctx.fillStyle = "#7f8c8d";
                 ctx.beginPath();
@@ -201,7 +234,7 @@ game_html = f"""
                 ctx.fillText("🤖", op.x - 7, op.y + 4);
             }});
 
-            // Draw Player (Tiny Monkey with Gloves)
+            // Player Monkey
             ctx.fillStyle = player.color;
             ctx.beginPath();
             ctx.arc(player.x, player.y, player.size, 0, Math.PI * 2);
@@ -215,7 +248,7 @@ game_html = f"""
             ctx.arc(player.x + gloveOffset, player.y - 4, 8, 0, Math.PI * 2);
             ctx.fill();
 
-            // HUD / UI Overlay inside canvas
+            // HUD
             ctx.fillStyle = "white";
             ctx.font = "14px sans-serif";
             ctx.fillText(`Score: ${{score}} | Level: ${{level}} | Health: ${{Math.ceil(health)}}/100`, 20, 30);
@@ -227,7 +260,8 @@ game_html = f"""
             requestAnimationFrame(loop);
         }}
 
-        loop();
+        // Initial draw behind overlay
+        draw();
     </script>
 </body>
 </html>
