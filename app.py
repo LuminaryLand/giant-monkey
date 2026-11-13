@@ -93,7 +93,6 @@ game_html_template = """
         let maxHealth = 100;
         let baseSpeed = __GAME_SPEED__;
 
-        // Player Monkey
         let player = {
             x: 100,
             y: 260,
@@ -102,16 +101,13 @@ game_html_template = """
             speed: 3.5
         };
 
-        // Projectiles (Bullets)
         let bullets = [];
 
-        // Opponents (Rival Monkeys moving slower from the right)
         let opponents = [
             { x: 600, y: 260, width: 34, height: 36, speed: 0.8 * baseSpeed, health: 30, maxHealth: 30 },
             { x: 750, y: 280, width: 34, height: 36, speed: 0.7 * baseSpeed, health: 30, maxHealth: 30 }
         ];
 
-        // Meat Buffets
         let meats = [
             { x: 350, y: 290, size: 12 },
             { x: 500, y: 250, size: 12 }
@@ -124,7 +120,6 @@ game_html_template = """
             keys[e.code] = true;
             if (e.code === 'Space') {
                 e.preventDefault();
-                // Shoot projectile from player position
                 bullets.push({
                     x: player.x + player.width,
                     y: player.y + 12,
@@ -139,13 +134,11 @@ game_html_template = """
         });
 
         function update() {
-            // Movement
             if ((keys['ArrowLeft'] || keys['KeyA']) && player.x > 30) player.x -= player.speed;
             if ((keys['ArrowRight'] || keys['KeyD']) && player.x < canvas.width / 2) player.x += player.speed;
             if ((keys['ArrowUp'] || keys['KeyW']) && player.y > 210) player.y -= player.speed;
             if ((keys['ArrowDown'] || keys['KeyS']) && player.y < canvas.height - 90) player.y += player.speed;
 
-            // Update Bullets
             bullets.forEach((b, index) => {
                 b.x += b.speed;
                 if (b.x > canvas.width) {
@@ -153,18 +146,14 @@ game_html_template = """
                 }
             });
 
-            // Update Opponents (Rival Monkeys)
             opponents.forEach((op, opIndex) => {
-                // Walk slowly towards player
                 op.x -= op.speed;
 
-                // Reset opponent if they pass left side
                 if (op.x < -40) {
                     op.x = canvas.width + 50;
                     op.y = Math.random() * 80 + 220;
                 }
 
-                // Check bullet collisions with opponent
                 bullets.forEach((b, bIndex) => {
                     let dist = Math.hypot(b.x - op.x, b.y - op.y);
                     if (dist < 25) {
@@ -173,7 +162,6 @@ game_html_template = """
                         if (op.health <= 0) {
                             opponents.splice(opIndex, 1);
                             score += 50;
-                            // Spawn new rival monkey
                             opponents.push({
                                 x: canvas.width + 60,
                                 y: Math.random() * 80 + 220,
@@ -187,7 +175,6 @@ game_html_template = """
                     }
                 });
 
-                // Check player contact damage
                 let pDist = Math.hypot(player.x - op.x, player.y - op.y);
                 if (pDist < 30) {
                     health -= 0.3;
@@ -198,7 +185,6 @@ game_html_template = """
                 }
             });
 
-            // Update Meats
             meats.forEach((meat, index) => {
                 let dist = Math.hypot(player.x - meat.x, player.y - meat.y);
                 if (dist < 25) {
@@ -221,24 +207,19 @@ game_html_template = """
         }
 
         function drawScenery() {
-            // Sky
             ctx.fillStyle = "#5dade2";
             ctx.fillRect(0, 0, canvas.width, 240);
 
-            // Clouds
             ctx.fillStyle = "#ffffff";
             ctx.fillRect(100, 40, 70, 24);
             ctx.fillRect(450, 70, 90, 28);
 
-            // Jungle Green Ground
             ctx.fillStyle = "#27ae60";
             ctx.fillRect(0, 240, canvas.width, 20);
 
-            // Brown Dirt Ground
             ctx.fillStyle = "#784212";
             ctx.fillRect(0, 260, canvas.width, canvas.height - 260);
 
-            // Grass tufts
             ctx.fillStyle = "#2ecc71";
             for (let i = 0; i < canvas.width; i += 30) {
                 ctx.fillRect(i, 235, 10, 8);
@@ -249,7 +230,6 @@ game_html_template = """
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             drawScenery();
 
-            // Draw Meat Buffets
             meats.forEach(meat => {
                 ctx.fillStyle = "#c0392b";
                 ctx.beginPath();
@@ -260,7 +240,6 @@ game_html_template = """
                 ctx.fillText("🥩", meat.x - 6, meat.y + 4);
             });
 
-            // Draw Bullets
             bullets.forEach(b => {
                 ctx.fillStyle = "#f1c40f";
                 ctx.beginPath();
@@ -268,30 +247,23 @@ game_html_template = """
                 ctx.fill();
             });
 
-            // Draw Opponent Rival Monkeys
             opponents.forEach(op => {
-                // Rival Monkey Body
                 ctx.fillStyle = "#a04000";
                 ctx.fillRect(op.x - 14, op.y - 20, 28, 26);
-                // Head
                 ctx.fillStyle = "#d35400";
                 ctx.beginPath();
                 ctx.arc(op.x, op.y - 28, 11, 0, Math.PI * 2);
                 ctx.fill();
-                // Face snout
                 ctx.fillStyle = "#f39c12";
                 ctx.fillRect(op.x - 6, op.y - 32, 12, 10);
 
-                // Health bar above rival
                 ctx.fillStyle = "#333";
                 ctx.fillRect(op.x - 18, op.y - 48, 36, 5);
                 ctx.fillStyle = "#e74c3c";
                 ctx.fillRect(op.x - 18, op.y - 48, (op.health / op.maxHealth) * 36, 5);
             });
 
-            // Draw Player Giant Monkey
             let p = player;
-            // Tail
             ctx.strokeStyle = "#873600";
             ctx.lineWidth = 4;
             ctx.beginPath();
@@ -299,15 +271,5 @@ game_html_template = """
             ctx.quadraticCurveTo(p.x - 30, p.y + 10, p.x - 20, p.y + 18);
             ctx.stroke();
 
-            // Body
             ctx.fillStyle = "#b9770e";
-            ctx.fillRect(p.x - 16, p.y - 24, 32, 30);
-
-            // Head & Snout
-            ctx.fillStyle = "#f39c12";
-            ctx.fillRect(p.x - 12, p.y - 40, 24, 18);
-
-            // Ears
-            ctx.fillStyle = "#873600";
-            ctx.fillRect(p.x - 20, p.y - 36, 8, 10);
-            ctx.fillRect(p.x + 12, p.y
+            ctx.fillRect(p.x - 16, p.y - 24, 32, 30
