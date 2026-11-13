@@ -1,25 +1,23 @@
 import streamlit as st
 
 st.set_page_config(
-    page_title="Giant Monkey: Town Brawl",
+    page_title="Giant Monkey: Retro Beat-Down",
     page_icon="🦍",
     layout="centered"
 )
 
-st.title("🦍 Giant Monkey: Town Brawl")
+st.title("🦍 Giant Monkey: Retro Town Brawl")
 st.markdown(
-    "You are a tiny monkey with heavy boxing gloves in a town. "
-    "**Punch (SPACE)** and **Kick (K)** incoming opponents, and **eat meat (🥩)** to grow and level up!"
+    "Control your retro boxing monkey, fight oncoming street opponents, and eat meat buffets to level up!"
 )
 
-# Sidebar controls & instructions
 with st.sidebar:
-    st.header("🎮 Controls")
+    st.header("🎮 Retro Controls")
     st.markdown("""
     - **Move:** Arrow Keys or `W`, `A`, `S`, `D`
     - **Punch:** `SPACEBAR`
     - **Kick:** `K` or `X`
-    - **Objective:** Fight attackers & eat meat to level up!
+    - **Objective:** Defeat waves of fighters & eat meat!
     """)
     st.divider()
     game_speed = st.slider("Game Difficulty / Speed", 1, 3, 2)
@@ -31,9 +29,9 @@ game_html = f"""
     <style>
         body {{
             margin: 0;
-            background-color: #1a1a1a;
+            background-color: #0d0d0d;
             color: white;
-            font-family: sans-serif;
+            font-family: 'Courier New', monospace;
             text-align: center;
         }}
         .game-container {{
@@ -41,12 +39,12 @@ game_html = f"""
             display: inline-block;
         }}
         canvas {{
-            background: #3d3d3d;
+            background: #1e3d59;
             display: block;
             margin: 0 auto;
             border: 4px solid #f39c12;
-            border-radius: 8px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.8);
+            image-rendering: pixelated;
             cursor: pointer;
         }}
         #overlay {{
@@ -55,24 +53,23 @@ game_html = f"""
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.75);
+            background: rgba(0,0,0,0.8);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            border-radius: 8px;
             cursor: pointer;
         }}
-        h2 {{ margin: 0 0 10px 0; color: #f39c12; }}
-        p {{ margin: 0; font-size: 14px; color: #ddd; }}
+        h2 {{ color: #f39c12; margin-bottom: 5px; }}
+        p {{ color: #ddd; font-size: 14px; }}
     </style>
 </head>
 <body>
     <div class="game-container" onclick="startGame()">
-        <canvas id="gameCanvas" width="700" height="450"></canvas>
+        <canvas id="gameCanvas" width="720" height="480"></canvas>
         <div id="overlay">
-            <h2>▶ Click Here to Play</h2>
-            <p>Click to activate controls & start town brawl!</p>
+            <h2>▶ CLICK TO START RETRO BRAWL</h2>
+            <p>Click anywhere to activate arcade controls</p>
         </div>
     </div>
 
@@ -97,11 +94,11 @@ game_html = f"""
         let maxHealth = 100;
         let speedMultiplier = {game_speed};
 
-        // Player Monkey Character
         let player = {{
-            x: 350,
-            y: 225,
-            size: 18,
+            x: 360,
+            y: 280,
+            width: 32,
+            height: 40,
             speed: 4,
             isPunching: false,
             punchTimer: 0,
@@ -110,13 +107,13 @@ game_html = f"""
         }};
 
         let opponents = [
-            {{ x: 100, y: 100, size: 16, speed: 1.5, health: 30 }},
-            {{ x: 600, y: 350, size: 18, speed: 1.2, health: 30 }}
+            {{ x: 100, y: 260, width: 30, height: 38, speed: 1.2, health: 40, maxHealth: 40 }},
+            {{ x: 620, y: 300, width: 30, height: 38, speed: 1.0, health: 40, maxHealth: 40 }}
         ];
 
         let meats = [
-            {{ x: 200, y: 300, size: 12 }},
-            {{ x: 500, y: 120, size: 12 }}
+            {{ x: 220, y: 320, size: 12 }},
+            {{ x: 500, y: 240, size: 12 }}
         ];
 
         let keys = {{}};
@@ -124,18 +121,17 @@ game_html = f"""
         window.addEventListener('keydown', (e) => {{
             if (!gameRunning) return;
             keys[e.code] = true;
-            
             if (e.code === 'Space') {{
                 e.preventDefault();
                 player.isPunching = true;
-                player.punchTimer = 12;
-                checkCombat(20);
+                player.punchTimer = 10;
+                checkCombat(25);
             }}
             if (e.code === 'KeyK' || e.code === 'KeyX') {{
                 e.preventDefault();
                 player.isKicking = true;
-                player.kickTimer = 12;
-                checkCombat(30);
+                player.kickTimer = 10;
+                checkCombat(35);
             }}
         }});
 
@@ -146,17 +142,19 @@ game_html = f"""
         function checkCombat(damage) {{
             opponents.forEach((op, index) => {{
                 let dist = Math.hypot(player.x - op.x, player.y - op.y);
-                if (dist < 45 + player.size) {{
-                    op.health -= damage * level;
+                if (dist < 50) {{
+                    op.health -= damage;
                     if (op.health <= 0) {{
                         opponents.splice(index, 1);
-                        score += 50;
+                        score += 100;
                         opponents.push({{
-                            x: Math.random() * 600 + 50,
-                            y: Math.random() * 350 + 50,
-                            size: 16,
-                            speed: 1 + Math.random() * level,
-                            health: 30 * level
+                            x: Math.random() > 0.5 ? 50 : 650,
+                            y: Math.random() * 120 + 220,
+                            width: 30,
+                            height: 38,
+                            speed: 1.2 + (level * 0.2),
+                            health: 40 * level,
+                            maxHealth: 40 * level
                         }});
                     }}
                 }}
@@ -164,10 +162,10 @@ game_html = f"""
         }}
 
         function update() {{
-            if ((keys['ArrowLeft'] || keys['KeyA']) && player.x > 30) player.x -= player.speed;
-            if ((keys['ArrowRight'] || keys['KeyD']) && player.x < canvas.width - 30) player.x += player.speed;
-            if ((keys['ArrowUp'] || keys['KeyW']) && player.y > 40) player.y -= player.speed;
-            if ((keys['ArrowDown'] || keys['KeyS']) && player.y < canvas.height - 30) player.y += player.speed;
+            if ((keys['ArrowLeft'] || keys['KeyA']) && player.x > 40) player.x -= player.speed;
+            if ((keys['ArrowRight'] || keys['KeyD']) && player.x < canvas.width - 40) player.x += player.speed;
+            if ((keys['ArrowUp'] || keys['KeyW']) && player.y > 200) player.y -= player.speed;
+            if ((keys['ArrowDown'] || keys['KeyS']) && player.y < canvas.height - 90) player.y += player.speed;
 
             if (player.punchTimer > 0) player.punchTimer--;
             else player.isPunching = false;
@@ -175,142 +173,125 @@ game_html = f"""
             if (player.kickTimer > 0) player.kickTimer--;
             else player.isKicking = false;
 
-            // Opponents chase player
             opponents.forEach(op => {{
                 let angle = Math.atan2(player.y - op.y, player.x - op.x);
                 op.x += Math.cos(angle) * op.speed * speedMultiplier;
                 op.y += Math.sin(angle) * op.speed * speedMultiplier;
 
                 let dist = Math.hypot(player.x - op.x, player.y - op.y);
-                if (dist < player.size + op.size + 5) {{
-                    health -= 0.35;
+                if (dist < 35) {{
+                    health -= 0.4;
                     if (health <= 0) {{
                         health = maxHealth;
-                        score = Math.max(0, score - 50);
+                        score = Math.max(0, score - 100);
                     }}
                 }}
             }});
 
-            // Meat collection
             meats.forEach((meat, index) => {{
                 let dist = Math.hypot(player.x - meat.x, player.y - meat.y);
-                if (dist < player.size + meat.size + 10) {{
+                if (dist < 30) {{
                     meats.splice(index, 1);
-                    score += 25;
-                    health = Math.min(maxHealth, health + 30);
-                    
-                    if (score >= level * 150) {{
+                    score += 50;
+                    health = Math.min(maxHealth, health + 35);
+
+                    if (score >= level * 200) {{
                         level++;
-                        player.size += 2;
-                        player.speed += 0.4;
+                        player.speed += 0.3;
                     }}
 
                     meats.push({{
-                        x: Math.random() * 640 + 30,
-                        y: Math.random() * 380 + 40,
+                        x: Math.random() * 600 + 60,
+                        y: Math.random() * 140 + 210,
                         size: 12
                     }});
                 }}
             }});
         }}
 
+        function drawBackground() {{
+            // Retro Sky / Industrial City Backdrop
+            ctx.fillStyle = "#111b21";
+            ctx.fillRect(0, 0, canvas.width, 180);
+
+            // Warehouse / Building silhouettes
+            ctx.fillStyle = "#222e35";
+            ctx.fillRect(50, 40, 160, 140);
+            ctx.fillRect(260, 20, 200, 160);
+            ctx.fillRect(500, 60, 180, 120);
+
+            // Industrial Pipes
+            ctx.fillStyle = "#d35400";
+            ctx.fillRect(100, 0, 16, 180);
+            ctx.fillRect(320, 0, 20, 180);
+            ctx.fillRect(580, 0, 16, 180);
+
+            // Chain-link fence barrier
+            ctx.fillStyle = "#4e5d6c";
+            ctx.fillRect(0, 175, canvas.width, 15);
+
+            // Fighting Arena Floor (Blue tile floor style)
+            ctx.fillStyle = "#2980b9";
+            ctx.fillRect(0, 190, canvas.width, canvas.height - 190);
+            
+            // Floor grid perspective lines
+            ctx.strokeStyle = "#1f618d";
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(180, 190); ctx.lineTo(80, canvas.height);
+            ctx.moveTo(540, 190); ctx.lineTo(640, canvas.height);
+            ctx.stroke();
+        }}
+
+        function drawHUD() {{
+            // NES Bottom Panel Box
+            ctx.fillStyle = "#000000";
+            ctx.fillRect(0, canvas.height - 75, canvas.width, 75);
+            ctx.strokeStyle = "#f39c12";
+            ctx.lineWidth = 3;
+            ctx.strokeRect(0, canvas.height - 75, canvas.width, 75);
+
+            // 1P Panel
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "bold 12px 'Courier New'";
+            ctx.fillText("1P MONKEY", 20, canvas.height - 50);
+            ctx.fillText(`LVL ${level}`, 140, canvas.height - 50);
+
+            // Player Health Bar Background & Fill
+            ctx.fillStyle = "#555";
+            ctx.fillRect(20, canvas.height - 40, 150, 12);
+            ctx.fillStyle = "#e74c3c";
+            ctx.fillRect(20, canvas.height - 40, (health / maxHealth) * 150, 12);
+
+            // Score / Status Panel
+            ctx.fillText(`SCORE: ${score}`, 240, canvas.height - 50);
+            ctx.fillText(`MEAT BUFF: ACTIVE`, 240, canvas.height - 25);
+
+            // CPU Opponents Panel
+            ctx.fillText("CPU OPPONENTS", 480, canvas.height - 50);
+            ctx.fillStyle = "#555";
+            ctx.fillRect(480, canvas.height - 40, 180, 12);
+            let totalOpHealth = opponents.reduce((acc, op) => acc + op.health, 0);
+            let maxOpHealth = opponents.reduce((acc, op) => acc + op.maxHealth, 0);
+            ctx.fillStyle = "#f1c40f";
+            ctx.fillRect(480, canvas.height - 40, Math.max(0, (totalOpHealth / maxOpHealth) * 180), 12);
+        }}
+
         function draw() {{
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawBackground();
 
-            // Town cobblestone background grid lines
-            ctx.strokeStyle = "#4a4a4a";
-            ctx.lineWidth = 15;
-            ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
-
-            // Draw Meat Buffets
+            // Draw Meat Buffs
             meats.forEach(meat => {{
-                ctx.fillStyle = "#e74c3c";
+                ctx.fillStyle = "#c0392b";
                 ctx.beginPath();
                 ctx.arc(meat.x, meat.y, meat.size, 0, Math.PI * 2);
                 ctx.fill();
-                ctx.fillStyle = "#fff";
-                ctx.font = "12px sans-serif";
-                ctx.fillText("🥩", meat.x - 7, meat.y + 4);
+                ctx.fillStyle = "#ffffff";
+                ctx.font = "10px sans-serif";
+                ctx.fillText("🥩", meat.x - 6, meat.y + 4);
             }});
 
-            // Draw Opponents (Attackers)
+            // Draw Opponents
             opponents.forEach(op => {{
-                ctx.fillStyle = "#95a5a6";
-                ctx.beginPath();
-                ctx.arc(op.x, op.y - 4, op.size, 0, Math.PI * 2);
-                ctx.fill();
-                // Opponent head & visor
-                ctx.fillStyle = "#34495e";
-                ctx.fillRect(op.x - 8, op.y - 14, 16, 10);
-            }});
-
-            // --- DRAW PLAYER MONKEY CHARACTER ---
-            let pSize = player.size;
-            
-            // Tail
-            ctx.strokeStyle = "#b5651d";
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.moveTo(player.x - pSize, player.y + 5);
-            ctx.quadraticCurveTo(player.x - pSize - 18, player.y + 15, player.x - pSize - 10, player.y - 10);
-            ctx.stroke();
-
-            // Body / Torso (Fur brown)
-            ctx.fillStyle = "#d35400";
-            ctx.beginPath();
-            ctx.arc(player.x, player.y, pSize, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Head & Face (Tan snout area)
-            ctx.fillStyle = "#e59866";
-            ctx.beginPath();
-            ctx.arc(player.x, player.y - pSize - 4, pSize * 0.8, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Ears
-            ctx.fillStyle = "#d35400";
-            ctx.beginPath();
-            ctx.arc(player.x - pSize * 0.7, player.y - pSize - 4, 6, 0, Math.PI * 2);
-            ctx.arc(player.x + pSize * 0.7, player.y - pSize - 4, 6, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Eyes (Angry fighter expression)
-            ctx.fillStyle = "#000";
-            ctx.fillRect(player.x - 6, player.y - pSize - 8, 4, 3);
-            ctx.fillRect(player.x + 2, player.y - pSize - 8, 4, 3);
-
-            // Big Red Boxing Gloves
-            ctx.fillStyle = "#c0392b";
-            let leftGloveX = player.x - pSize - (player.isPunching ? 16 : 8);
-            let rightGloveX = player.x + pSize + (player.isPunching ? 16 : 8);
-            
-            ctx.beginPath();
-            ctx.arc(leftGloveX, player.y - 2, 9, 0, Math.PI * 2);
-            ctx.arc(rightGloveX, player.y - 2, 9, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Kicking Foot Animation
-            if (player.isKicking) {{
-                ctx.fillStyle = "#78281f";
-                ctx.fillRect(player.x + pSize, player.y + pSize - 2, 16, 8);
-            }}
-
-            // HUD Overlay
-            ctx.fillStyle = "white";
-            ctx.font = "14px sans-serif";
-            ctx.fillText(`Score: ${{score}} | Level: ${{level}} | Health: ${{Math.ceil(health)}}/100`, 20, 30);
-        }}
-
-        function loop() {{
-            update();
-            draw();
-            requestAnimationFrame(loop);
-        }}
-
-        draw();
-    </script>
-</body>
-</html>
-"""
-
-st.components.v1.html(game_html, height=480)
+                ctx.fillStyle = "#e
