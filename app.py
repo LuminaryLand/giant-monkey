@@ -9,7 +9,7 @@ st.set_page_config(
 st.title("🦍 Giant Monkey: World Tour & Super Powers")
 st.markdown(
     "Journey through the **City**, **Small Town**, and **Country**! "
-    "Shoot projectiles directly from your front, and eat meat (🥩) to make your shots **bigger, faster, and more powerful**!"
+    "Your character is safely locked on screen, shooting superpower blasts straight from your boxer monkey!"
 )
 
 with st.sidebar:
@@ -55,6 +55,7 @@ game_html_template = """
         let powerLevel = 1;
         let lastShotTime = 0;
         
+        // Player locked safely within screen bounds
         let p = { x: 120, y: 260, w: 36, h: 36, s: 3.5 };
         let bullets = [];
         
@@ -81,12 +82,12 @@ game_html_template = """
                 let fireCooldown = Math.max(90, 300 - (powerLevel * 40));
                 
                 if (now - lastShotTime > fireCooldown) {
-                    // Spawn bullets strictly in FRONT of the character (p.x + 36)
+                    // Bullets spawn strictly from the character's exact world position (p.x + 32)
                     bullets.push({ 
-                        x: p.x + 36, 
+                        x: (cameraX + p.x) + 32, 
                         y: p.y + 4, 
-                        s: 7 + (powerLevel * 1.2), // Faster speed per power level
-                        r: 4 + (powerLevel * 1.5)  // Bigger size per power level
+                        s: 7 + (powerLevel * 1.2), 
+                        r: 4 + (powerLevel * 1.5)  
                     });
                     lastShotTime = now;
                 }
@@ -101,10 +102,11 @@ game_html_template = """
         }
 
         function update() {
-            if ((keys['ArrowLeft'] || keys['KeyA']) && p.x > 50) p.x -= p.s;
-            if ((keys['ArrowRight'] || keys['KeyD'])) {
+            // Strict screen boundary limits so player can never run off screen
+            if ((keys['ArrowLeft'] || keys['KeyA']) && p.x > 40) p.x -= p.s;
+            if ((keys['ArrowRight'] || keys['KeyD']) && p.x < cv.width * 0.4) {
                 p.x += p.s;
-                cameraX += p.s * 0.5;
+                cameraX += p.s * 0.5; // Scroll world forward smoothly
             }
             if ((keys['ArrowUp'] || keys['KeyW']) && p.y > 210) p.y -= p.s;
             if ((keys['ArrowDown'] || keys['KeyS']) && p.y < cv.height - 75) p.y += p.s;
@@ -112,7 +114,7 @@ game_html_template = """
             // Bullets update
             bullets.forEach((b, i) => {
                 b.x += b.s;
-                if (b.x > cv.width + cameraX) bullets.splice(i, 1);
+                if (b.x > cameraX + cv.width + 100) bullets.splice(i, 1);
             });
 
             // Opponents update
@@ -126,7 +128,7 @@ game_html_template = """
 
                 bullets.forEach((b, bi) => {
                     if (Math.hypot(b.x - op.x, b.y - op.y) < (24 + b.r)) {
-                        op.health -= (15 + (powerLevel * 8)); // Stronger shots per power level
+                        op.health -= (15 + (powerLevel * 8)); 
                         bullets.splice(bi, 1);
                         if (op.health <= 0) {
                             opponents.splice(idx, 1);
@@ -148,7 +150,8 @@ game_html_template = """
                     }
                 });
 
-                if (Math.hypot(p.x - op.x, p.y - op.y) < 28) {
+                let playerWorldX = cameraX + p.x;
+                if (Math.hypot(playerWorldX - op.x, p.y - op.y) < 28) {
                     hp -= 0.35;
                     if (hp <= 0) {
                         hp = maxHp;
@@ -159,7 +162,8 @@ game_html_template = """
 
             // Meat Collection
             meats.forEach((m, mi) => {
-                let worldDist = Math.abs(p.x - m.x);
+                let playerWorldX = cameraX + p.x;
+                let worldDist = Math.abs(playerWorldX - m.x);
                 if (worldDist < 38 && Math.abs(p.y - m.y) < 38) {
                     meats.splice(mi, 1);
                     score += 40;
@@ -254,6 +258,7 @@ game_html_template = """
                 }
             });
 
+            // Player stays locked on screen at p.x
             drawMonkey(p.x, p.y, true);
 
             ctx.fillStyle = "rgba(0,0,0,0.75)"; ctx.fillRect(10, 10, 410, 42);
